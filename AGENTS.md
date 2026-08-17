@@ -56,7 +56,7 @@ The codebase follows a **clean-architecture** layout with the **repository patte
 ├── docker-compose.yml
 ├── pyproject.toml        # deps + tool config (pytest/black/isort/mypy); [tool.uv] package=false
 ├── uv.lock               # locked dependency versions (commit this)
-├── .python-version       # pinned Python version (3.11)
+├── .python-version       # pinned Python version (3.13)
 ├── env.example           # template for .env
 ├── Makefile
 └── yoyo.ini              # Yoyo CLI config (local DB)

@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from src.application.ports import HealthRepository, MessageRepository
 from src.application.schemas import MessageCreate
 from src.domain.entities import HealthCheck, Message
+from src.domain.exceptions import MessageNotFoundError
 
 
 class MessageService:
@@ -11,8 +12,14 @@ class MessageService:
     def __init__(self, repository: MessageRepository) -> None:
         self._repository = repository
 
-    async def list_messages(self) -> list[Message]:
-        return await self._repository.get_all()
+    async def list_messages(self, limit: int = 100, offset: int = 0) -> list[Message]:
+        return await self._repository.get_all(limit, offset)
+
+    async def get_message(self, message_id: int) -> Message:
+        message = await self._repository.get_by_id(message_id)
+        if message is None:
+            raise MessageNotFoundError(message_id)
+        return message
 
     async def create_message(self, data: MessageCreate) -> Message:
         return await self._repository.create(
@@ -25,6 +32,11 @@ class MessageService:
             created_at=datetime.now(UTC),
         )
 
+    async def delete_message(self, message_id: int) -> None:
+        deleted = await self._repository.delete(message_id)
+        if not deleted:
+            raise MessageNotFoundError(message_id)
+
 
 class HealthService:
     """Application service for health checks."""
@@ -35,12 +47,14 @@ class HealthService:
     async def check_health(self) -> HealthCheck:
         try:
             await self._repository.ping()
-            db_status = "connected"
-        except Exception as e:
-            db_status = f"error: {e!s}"
+            database = "connected"
+        except Exception:
+            # No exception details leaked to clients; the status field carries
+            # the only signal a load balancer / orchestrator needs.
+            database = "disconnected"
 
         return HealthCheck(
-            status="healthy",
+            status="healthy" if database == "connected" else "unhealthy",
             timestamp=datetime.now(UTC),
-            database=db_status,
+            database=database,
         )

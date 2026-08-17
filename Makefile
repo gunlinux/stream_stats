@@ -29,7 +29,7 @@ lint:
 
 format:
 	uv run isort src/ test/
-	uvx run ruff format src/ test/
+	uv run ruff format src/ test/
 
 clean:
 	find . -type f -name "*.pyc" -delete

@@ -1,6 +1,7 @@
 import shutil
 from pathlib import Path
 
+import psycopg2
 import pytest
 from fastapi.testclient import TestClient
 from pytest_postgresql import factories
@@ -49,6 +50,13 @@ def database_url(postgresql_proc) -> str:
         db_manager.database_url = dsn
         db_manager.apply_migrations()
         yield dsn
+
+
+@pytest.fixture(autouse=True)
+def _clean_messages(database_url: str) -> None:
+    """Truncate ``messages`` before each test so tests are order-independent."""
+    with psycopg2.connect(database_url) as conn, conn.cursor() as cur:
+        cur.execute("TRUNCATE messages RESTART IDENTITY")
 
 
 @pytest.fixture

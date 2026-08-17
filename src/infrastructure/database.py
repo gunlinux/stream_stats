@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -7,6 +8,8 @@ import asyncpg
 from yoyo import get_backend, read_migrations
 
 from src.infrastructure.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseManager:
@@ -52,10 +55,15 @@ class DatabaseManager:
                 pool = await self._get_pool()
                 async with pool.acquire() as conn:
                     await conn.fetchval("SELECT 1")
-                print("Database is ready!")
+                logger.info("Database is ready!")
                 return
             except Exception as e:
-                print(f"Database not ready (attempt {attempt + 1}/{max_retries}): {e}")
+                logger.warning(
+                    "Database not ready (attempt %d/%d): %s",
+                    attempt + 1,
+                    max_retries,
+                    e,
+                )
                 if attempt < max_retries - 1:
                     await asyncio.sleep(delay)
                 else:
@@ -74,7 +82,7 @@ class DatabaseManager:
             migrations = read_migrations(self.migrations_path)
 
             if not migrations:
-                print("No migrations found")
+                logger.info("No migrations found")
                 return
 
             # Apply migrations
@@ -82,21 +90,21 @@ class DatabaseManager:
                 # Get migrations that need to be applied
                 to_apply = backend.to_apply(migrations)
                 if to_apply:
-                    print(f"Applying {len(to_apply)} migrations...")
+                    logger.info("Applying %d migrations...", len(to_apply))
                     for migration in to_apply:
-                        print(f"  - Applying: {migration.id}")
+                        logger.info("  - Applying: %s", migration.id)
                         try:
                             backend.apply_one(migration)
-                            print(f"    ✅ Successfully applied: {migration.id}")
+                            logger.info("    Successfully applied: %s", migration.id)
                         except Exception as e:
-                            print(f"    ❌ Error applying {migration.id}: {e}")
+                            logger.error("Error applying %s: %s", migration.id, e)
                             raise
-                    print(f"Applied {len(to_apply)} migrations successfully")
+                    logger.info("Applied %d migrations successfully", len(to_apply))
                 else:
-                    print("All migrations are already applied")
+                    logger.info("All migrations are already applied")
 
         except Exception as e:
-            print(f"Error applying migrations: {e}")
+            logger.error("Error applying migrations: %s", e)
             raise
 
 

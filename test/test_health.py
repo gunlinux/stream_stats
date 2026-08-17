@@ -8,5 +8,5 @@ def test_health_check(client: TestClient):
 
     data = response.json()
     assert data["status"] == "healthy"
+    assert data["database"] == "connected"
     assert "timestamp" in data
-    assert "database" in data

@@ -10,15 +10,18 @@ class PostgresMessageRepository:
     def __init__(self, db_manager: DatabaseManager) -> None:
         self._db_manager = db_manager
 
-    async def get_all(self) -> list[Message]:
+    async def get_all(self, limit: int, offset: int) -> list[Message]:
         async with self._db_manager.get_connection() as conn:
             rows = await conn.fetch(
                 """
                 SELECT id, body, source, message_id, author_id,
                        stream_id, channel_id, created_at
                 FROM messages
-                ORDER BY created_at DESC
-                """
+                ORDER BY created_at DESC, id DESC
+                LIMIT $1 OFFSET $2
+                """,
+                limit,
+                offset,
             )
             return [Message(**row) for row in rows]
 
@@ -53,6 +56,7 @@ class PostgresMessageRepository:
                     author_id, stream_id, channel_id, created_at
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (source, message_id) DO NOTHING
                 RETURNING id, body, source, message_id,
                        author_id, stream_id, channel_id, created_at
                 """,
@@ -64,7 +68,24 @@ class PostgresMessageRepository:
                 channel_id,
                 created_at,
             )
-            assert row is not None
+            if row is None:
+                # Duplicate (source, message_id): return the existing row so
+                # stream-ingestion retries are idempotent.
+                row = await conn.fetchrow(
+                    """
+                    SELECT id, body, source, message_id,
+                           author_id, stream_id, channel_id, created_at
+                    FROM messages
+                    WHERE source = $1 AND message_id = $2
+                    """,
+                    source,
+                    message_id,
+                )
+            if row is None:
+                raise RuntimeError(
+                    "Failed to create message "
+                    f"(source={source}, message_id={message_id})"
+                )
             return Message(**row)
 
     async def delete(self, message_id: int) -> bool:

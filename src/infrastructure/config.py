@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     # API settings
     api_prefix: str = "/api/v1"
 
+    # CORS: comma-separated list of allowed origins. Credentials are enabled,
+    # so a wildcard origin is not valid — set the real origins in production.
+    cors_origins: str = "http://localhost:8000,http://127.0.0.1:8000"
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 
