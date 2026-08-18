@@ -1,3 +1,6 @@
 [flake8]
 max-line-length = 88
 extend-ignore = E203
+# conftest.py sets the API_TOKEN env var before importing the app (settings
+# are read from the environment at import time).
+per-file-ignores = test/conftest.py: E402

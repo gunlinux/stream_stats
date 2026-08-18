@@ -1,4 +1,6 @@
+import os
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
 
 import psycopg2
@@ -7,6 +9,11 @@ from fastapi.testclient import TestClient
 from pytest_postgresql import factories
 from pytest_postgresql.janitor import DatabaseJanitor
 
+# Settings are read from the environment at import time (pydantic-settings),
+# so API_TOKEN must be set before importing the app.
+os.environ.setdefault("API_TOKEN", "test-api-token")
+
+from src.infrastructure.config import settings
 from src.infrastructure.database import db_manager
 from src.main import app
 
@@ -60,6 +67,14 @@ def _clean_messages(database_url: str) -> None:
 
 
 @pytest.fixture
-def client(database_url: str) -> TestClient:
-    """Create a test client for the FastAPI app."""
-    return TestClient(app)
+def client(database_url: str) -> Iterator[TestClient]:
+    """Create a test client for the FastAPI app (authenticated with the test token).
+
+    Runs the app within its lifespan so the asyncpg pool is opened and closed
+    per test; a bare TestClient leaks a 10-connection pool per event loop,
+    which exhausts the ephemeral PostgreSQL's client limit mid-suite.
+    """
+    with TestClient(
+        app, headers={"Authorization": f"Bearer {settings.api_token}"}
+    ) as test_client:
+        yield test_client

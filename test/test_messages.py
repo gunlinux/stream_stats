@@ -1,5 +1,7 @@
 from fastapi.testclient import TestClient
 
+from src.main import app
+
 
 def _message_data(**overrides: object) -> dict[str, object]:
     data: dict[str, object] = {
@@ -18,6 +20,22 @@ def _create_message(client: TestClient, **overrides: object) -> dict[str, object
     response = client.post("/api/v1/messages", json=_message_data(**overrides))
     assert response.status_code == 201
     return response.json()
+
+
+def test_messages_require_bearer_token():
+    """Requests without a valid bearer token are rejected with 401"""
+    with TestClient(app) as anon:
+        missing = anon.get("/api/v1/messages")
+        assert missing.status_code == 401
+        assert missing.headers["WWW-Authenticate"] == "Bearer"
+
+        assert anon.post("/api/v1/messages", json=_message_data()).status_code == 401
+        assert (
+            anon.get(
+                "/api/v1/messages", headers={"Authorization": "Bearer wrong-token"}
+            ).status_code
+            == 401
+        )
 
 
 def test_create_message(client: TestClient):
