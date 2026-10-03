@@ -105,6 +105,13 @@ Environment variables (via `.env`, see `env.example`) are read by `src/infrastru
 
 Access them through the global `settings` instance: `from src.infrastructure.config import settings`.
 
+## Upstream ingress
+
+`stream_stats` is the storage sink of the chat pipeline and does **not** talk to RabbitMQ itself. The producers (`twitch_consumer`, `youtube_consumer`) publish each chat message as `MessageCreate` JSON to a RabbitMQ `messages` **fanout exchange**; `stream_stats_consumer` binds a durable `messages` queue to that exchange and forwards each message here via `POST /api/v1/messages` (bearer `API_TOKEN`).
+
+- The API therefore receives the `MessageCreate` shape: `body`, `source`, `message_id`, `author_id`, `stream_id`, `channel_id` — `source` is `0` twitch / `1` youtube. Extra fields are ignored.
+- The unique index on `(source, message_id)` is the idempotency key, so retries from either the producers or the consumer are safe (see Migrations → Yoyo).
+
 ## Development Conventions
 
 ### Database access — always raw SQL through `db_manager`
