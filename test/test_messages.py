@@ -9,6 +9,7 @@ def _message_data(**overrides: object) -> dict[str, object]:
         "source": 0,
         "message_id": "ext-msg-1",
         "author_id": "user-123",
+        "author": "Viewer",
         "stream_id": "stream-456",
         "channel_id": "channel-789",
     }
@@ -50,6 +51,7 @@ def test_create_message(client: TestClient):
     assert data["source"] == message_data["source"]
     assert data["message_id"] == message_data["message_id"]
     assert data["author_id"] == message_data["author_id"]
+    assert data["author"] == message_data["author"]
     assert data["stream_id"] == message_data["stream_id"]
     assert data["channel_id"] == message_data["channel_id"]
     assert "id" in data

@@ -27,6 +27,7 @@ class MessageService:
             source=data.source,
             message_id=data.message_id,
             author_id=data.author_id,
+            author=data.author,
             stream_id=data.stream_id,
             channel_id=data.channel_id,
             created_at=datetime.now(UTC),

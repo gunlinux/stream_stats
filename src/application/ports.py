@@ -17,6 +17,7 @@ class MessageRepository(Protocol):
         source: int,
         message_id: str,
         author_id: str,
+        author: str,
         stream_id: str,
         channel_id: str,
         created_at: datetime,

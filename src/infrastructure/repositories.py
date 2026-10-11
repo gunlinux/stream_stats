@@ -14,7 +14,7 @@ class PostgresMessageRepository:
         async with self._db_manager.get_connection() as conn:
             rows = await conn.fetch(
                 """
-                SELECT id, body, source, message_id, author_id,
+                SELECT id, body, source, message_id, author_id, author,
                        stream_id, channel_id, created_at
                 FROM messages
                 ORDER BY created_at DESC, id DESC
@@ -29,7 +29,7 @@ class PostgresMessageRepository:
         async with self._db_manager.get_connection() as conn:
             row = await conn.fetchrow(
                 """
-                SELECT id, body, source, message_id, author_id,
+                SELECT id, body, source, message_id, author_id, author,
                        stream_id, channel_id, created_at
                 FROM messages
                 WHERE id = $1
@@ -44,6 +44,7 @@ class PostgresMessageRepository:
         source: int,
         message_id: str,
         author_id: str,
+        author: str,
         stream_id: str,
         channel_id: str,
         created_at: datetime,
@@ -53,17 +54,18 @@ class PostgresMessageRepository:
                 """
                 INSERT INTO messages (
                     body, source, message_id,
-                    author_id, stream_id, channel_id, created_at
+                    author_id, author, stream_id, channel_id, created_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 ON CONFLICT (source, message_id) DO NOTHING
                 RETURNING id, body, source, message_id,
-                       author_id, stream_id, channel_id, created_at
+                       author_id, author, stream_id, channel_id, created_at
                 """,
                 body,
                 source,
                 message_id,
                 author_id,
+                author,
                 stream_id,
                 channel_id,
                 created_at,
@@ -74,7 +76,7 @@ class PostgresMessageRepository:
                 row = await conn.fetchrow(
                     """
                     SELECT id, body, source, message_id,
-                           author_id, stream_id, channel_id, created_at
+                           author_id, author, stream_id, channel_id, created_at
                     FROM messages
                     WHERE source = $1 AND message_id = $2
                     """,
